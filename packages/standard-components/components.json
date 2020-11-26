@@ -260,7 +260,9 @@
 		"children": true,
 		"data": true,
 		"props": {
-			"datasource": "tables"
+			"datasource": "tables",
+			"searchable": "bool",
+			"searchFields": "string"
 		}
 	},
 	"stackedlist": {

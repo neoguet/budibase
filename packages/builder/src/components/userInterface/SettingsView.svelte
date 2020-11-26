@@ -36,12 +36,18 @@
   ]
 
   const canRenderControl = (key, dependsOn) => {
-    let test = !isEmpty(componentInstance[dependsOn])
-
-    return (
-      propExistsOnComponentDef(key) &&
-      (!dependsOn || !isEmpty(componentInstance[dependsOn]))
-    )
+    const propExists = propExistsOnComponentDef(key)
+    if (dependsOn == null) {
+      return propExists
+    } else {
+      const componentValue = componentInstance[dependsOn]
+      return (
+        propExists &&
+        componentValue != null &&
+        componentValue !== "" &&
+        componentValue !== false
+      )
+    }
   }
 
   $: isPage = screenOrPageInstance && screenOrPageInstance.favicon

@@ -16,3 +16,14 @@ export const fetchTableData = async tableId => {
   const rows = await API.get({ url: `/api/${tableId}/rows` })
   return await enrichRows(rows, tableId)
 }
+
+/**
+ * Searches a table by the specified query string.
+ */
+export const searchTable = async ({ tableId, query }) => {
+  const rows = await API.post({
+    url: `/api/${tableId}/rows/search`,
+    body: { query, boolean: "AND" },
+  })
+  return await enrichRows(rows, tableId)
+}

@@ -120,6 +120,18 @@ export default {
             key: "datasource",
             control: TableViewSelect,
           },
+          {
+            label: "Searchable",
+            key: "searchable",
+            valueKey: "checked",
+            control: Checkbox,
+          },
+          {
+            label: "Search Cols.",
+            key: "searchFields",
+            dependsOn: "searchable",
+            control: MultiTableViewFieldSelect,
+          },
         ],
       },
       children: [],
