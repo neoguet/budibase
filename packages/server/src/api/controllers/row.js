@@ -8,6 +8,7 @@ const {
   SEPARATOR,
 } = require("../../db/utils")
 const { cloneDeep } = require("lodash")
+const { search } = require("../../search")
 
 const TABLE_VIEW_BEGINS_WITH = `all${SEPARATOR}${DocumentTypes.TABLE}${SEPARATOR}`
 
@@ -198,19 +199,6 @@ exports.fetchTableRows = async function(ctx) {
   )
 }
 
-exports.search = async function(ctx) {
-  const appId = ctx.user.appId
-  const db = new CouchDB(appId)
-  const response = await db.allDocs({
-    include_docs: true,
-    ...ctx.request.body,
-  })
-  ctx.body = await linkRows.attachLinkInfo(
-    appId,
-    response.rows.map(row => row.doc)
-  )
-}
-
 exports.find = async function(ctx) {
   const appId = ctx.user.appId
   const db = new CouchDB(appId)
@@ -313,6 +301,13 @@ exports.fetchEnrichedRow = async function(ctx) {
   }
   ctx.body = row
   ctx.status = 200
+}
+
+exports.search = async ctx => {
+  const appId = ctx.user.appId
+  const tableId = ctx.params.tableId
+  const params = ctx.request.body
+  ctx.body = await search(appId, tableId, params)
 }
 
 function coerceRowValues(rec, table) {

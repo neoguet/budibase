@@ -2,12 +2,22 @@ const Router = require("@koa/router")
 const rowController = require("../controllers/row")
 const authorized = require("../../middleware/authorized")
 const usage = require("../../middleware/usageQuota")
+const Joi = require("joi")
+const joiValidator = require("../../middleware/joi-validator")
 const {
   PermissionLevels,
   PermissionTypes,
 } = require("../../utilities/security/permissions")
 
 const router = Router()
+
+function searchValidator() {
+  // prettier-ignore
+  return joiValidator.body(Joi.object({
+    query: Joi.object().unknown(true).required(),
+    bool: Joi.string().optional().valid("AND", "OR"),
+  }).unknown(true))
+}
 
 router
   .get(
@@ -25,7 +35,6 @@ router
     authorized(PermissionTypes.TABLE, PermissionLevels.READ),
     rowController.find
   )
-  .post("/api/rows/search", rowController.search)
   .post(
     "/api/:tableId/rows",
     authorized(PermissionTypes.TABLE, PermissionLevels.WRITE),
@@ -47,6 +56,12 @@ router
     authorized(PermissionTypes.TABLE, PermissionLevels.WRITE),
     usage,
     rowController.destroy
+  )
+  .post(
+    "/api/:tableId/rows/search",
+    authorized(PermissionTypes.TABLE, PermissionTypes.READ),
+    //searchValidator(),
+    rowController.search
   )
 
 module.exports = router

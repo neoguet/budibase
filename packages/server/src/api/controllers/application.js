@@ -26,6 +26,7 @@ const {
 const { MAIN, UNAUTHENTICATED, PageTypes } = require("../../constants/pages")
 const { HOME_SCREEN } = require("../../constants/screens")
 const { cloneDeep } = require("lodash/fp")
+const search = require("../../search")
 
 const APP_PREFIX = DocumentTypes.APP + SEPARATOR
 
@@ -104,6 +105,7 @@ exports.fetchAppDefinition = async function(ctx) {
     )
   ).rows.map(row => row.doc)
   // TODO: need to handle access control here, limit screens to user access level
+  await search.init(ctx.params.appId)
   ctx.body = {
     page: correctPage,
     screens: screens,
@@ -116,6 +118,7 @@ exports.fetchAppPackage = async function(ctx) {
   const application = await db.get(ctx.params.appId)
 
   const { mainPage, unauthPage } = await getMainAndUnauthPage(db)
+  await search.init(ctx.params.appId)
   ctx.body = {
     application,
     pages: {
@@ -123,7 +126,6 @@ exports.fetchAppPackage = async function(ctx) {
       unauthenticated: unauthPage,
     },
   }
-
   await setBuilderToken(ctx, ctx.params.appId, application.version)
 }
 

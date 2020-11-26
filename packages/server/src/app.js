@@ -6,7 +6,7 @@ const http = require("http")
 const api = require("./api")
 const env = require("./environment")
 const eventEmitter = require("./events")
-const automations = require("./automations/index")
+const automations = require("./automations")
 const Sentry = require("@sentry/node")
 
 const app = new Koa()
