@@ -2,6 +2,7 @@ const elasticlunr = require("elasticlunr")
 const CouchDB = require("../db")
 const emitter = require("../events")
 const { getRowParams, getTableParams } = require("../db/utils")
+const { attachLinkInfo } = require("../db/linkedRows")
 
 class ControllerStorage {
   constructor() {
@@ -88,17 +89,14 @@ class SearchController {
         })
       )
     ).rows.map(row => row.doc)
-    for (let row of rows) {
-      this.index.addDoc(row)
+    const linkRows = await attachLinkInfo(this.appId, rows)
+    for (let row of linkRows) {
+      this.addRow(row)
     }
   }
 
   addRow(row) {
-    try {
-      this.index.removeDoc(row)
-    } catch (err) {
-      // can't do anything about error here, just suppress
-    }
+    this.index.removeDoc(row)
     this.index.addDoc(row)
   }
 

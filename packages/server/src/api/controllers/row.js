@@ -55,6 +55,10 @@ exports.patch = async function(ctx) {
     return
   }
 
+  // emit event before updating links - everything needs to see what links are
+  // going to be
+  ctx.eventEmitter && ctx.eventEmitter.emitRow(`row:update`, appId, row, table)
+
   // returned row is cleaned and prepared for writing to DB
   row = await linkRows.updateLinks({
     appId,
@@ -67,7 +71,6 @@ exports.patch = async function(ctx) {
   row._rev = response.rev
   row.type = "row"
 
-  ctx.eventEmitter && ctx.eventEmitter.emitRow(`row:update`, appId, row, table)
   ctx.body = row
   ctx.status = 200
   ctx.message = `${table.name} updated successfully.`
@@ -89,9 +92,6 @@ exports.save = async function(ctx) {
     row._id = generateRowID(row.tableId)
   }
 
-  // if the row obj had an _id then it will have been retrieved
-  const existingRow = ctx.preExisting
-
   const table = await db.get(row.tableId)
 
   row = coerceRowValues(row, table)
@@ -110,6 +110,10 @@ exports.save = async function(ctx) {
     return
   }
 
+  // emit event before updating links - everything needs to see what links are
+  // going to be
+  ctx.eventEmitter && ctx.eventEmitter.emitRow(`row:save`, appId, row, table)
+
   // make sure link rows are up to date
   row = await linkRows.updateLinks({
     appId,
@@ -119,24 +123,13 @@ exports.save = async function(ctx) {
     table,
   })
 
-  if (existingRow) {
-    const response = await db.put(row)
-    row._rev = response.rev
-    row.type = "row"
-    ctx.body = row
-    ctx.status = 200
-    ctx.message = `${table.name} updated successfully.`
-    return
-  }
-
   row.type = "row"
   const response = await db.post(row)
   row._rev = response.rev
 
-  ctx.eventEmitter && ctx.eventEmitter.emitRow(`row:save`, appId, row, table)
   ctx.body = row
   ctx.status = 200
-  ctx.message = `${table.name} created successfully`
+  ctx.message = `${table.name} saved successfully`
 }
 
 exports.fetchView = async function(ctx) {
@@ -218,6 +211,11 @@ exports.destroy = async function(ctx) {
     ctx.throw(400, "Supplied tableId doesn't match the row's tableId")
     return
   }
+
+  // emit event before updating links - everything needs to see what links are
+  // going to be
+  ctx.eventEmitter && ctx.eventEmitter.emitRow(`row:delete`, appId, row)
+
   await linkRows.updateLinks({
     appId,
     eventType: linkRows.EventType.ROW_DELETE,
@@ -229,7 +227,6 @@ exports.destroy = async function(ctx) {
 
   // for automations include the row that was deleted
   ctx.row = row
-  ctx.eventEmitter && ctx.eventEmitter.emitRow(`row:delete`, appId, row)
 }
 
 exports.validate = async function(ctx) {
@@ -372,6 +369,12 @@ async function bulkDelete(ctx) {
   const { rows } = ctx.request.body
   const db = new CouchDB(appId)
 
+  // emit event before updating links - everything needs to see what links are
+  // going to be
+  rows.forEach(row => {
+    ctx.eventEmitter && ctx.eventEmitter.emitRow(`row:delete`, appId, row)
+  })
+
   const linkUpdates = rows.map(row =>
     linkRows.updateLinks({
       appId,
@@ -383,8 +386,5 @@ async function bulkDelete(ctx) {
 
   await db.bulkDocs(rows.map(row => ({ ...row, _deleted: true })))
   await Promise.all(linkUpdates)
-
-  rows.forEach(row => {
-    ctx.eventEmitter && ctx.eventEmitter.emitRow(`row:delete`, appId, row)
-  })
+  ctx.body = "Bulk deletion successful"
 }
