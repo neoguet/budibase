@@ -96,8 +96,11 @@ class SearchController {
   }
 
   addRow(row) {
-    this.index.removeDoc(row)
-    this.index.addDoc(row)
+    if (this.index.documentStore.getDoc(row._id)) {
+      this.index.updateDoc(row)
+    } else {
+      this.index.addDoc(row)
+    }
   }
 
   deleteRow(row) {
@@ -108,17 +111,59 @@ class SearchController {
     let options = {
       expand: true,
     }
-    if (params.bool) {
-      options = {
-        boolean: params.bool,
-      }
+    let results
+    if (typeof params.query === "object") {
+      results = this.advancedSearch(params)
+    } else {
+      results = this.index.search(params.query, options)
     }
-    const results = this.index.search(params.query, options)
     let docs = []
     for (let result of results) {
       docs.push(this.index.documentStore.getDoc(result.ref))
     }
     return docs
+  }
+
+  // break this out, some crazy stuff going on here
+  advancedSearch(params) {
+    const orConditions =
+      !params.boolean || params.boolean.toLowerCase() === "or"
+    const config = {
+      bool: "OR",
+      boost: 1,
+      expand: true,
+    }
+
+    let results = []
+    let first = true
+    for (let prop of Object.keys(params.query)) {
+      const value = params.query[prop]
+      if (value == null || value === "") {
+        continue
+      }
+      // syntax is very weird, this is undocumented
+      const references = Object.keys(
+        this.index.fieldSearch([value], prop, {
+          [prop]: config,
+        })
+      )
+      // OR condition, union of arrays
+      if (orConditions) {
+        results = results.concat(references)
+      }
+      // AND condition, need to populate first
+      else if (first) {
+        results = references
+        first = false
+      }
+      // get the intersection of arrays for AND
+      else {
+        results = results.filter(result => references.includes(result))
+      }
+    }
+    // make sure unique
+    results = [...new Set(results)]
+    return results.map(result => ({ ref: result }))
   }
 }
 
