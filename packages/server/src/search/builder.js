@@ -137,13 +137,14 @@ class SearchController {
     let results = []
     let first = true
     for (let prop of Object.keys(params.query)) {
-      const value = params.query[prop]
-      if (value == null || value === "") {
+      const query = params.query[prop]
+      if (query == null || query === "") {
         continue
       }
       // syntax is very weird, this is undocumented
+      const queryTokens = this.index.pipeline.run(elasticlunr.tokenizer(query))
       const references = Object.keys(
-        this.index.fieldSearch([value], prop, {
+        this.index.fieldSearch(queryTokens, prop, {
           [prop]: config,
         })
       )
