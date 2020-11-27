@@ -73,7 +73,7 @@
 
   {#if rows && rows.length}
     <div class="results" class:searchable>
-      {#each rows as row}
+      {#each rows as row (row._id)}
         <DataProvider {row}>
           <slot />
         </DataProvider>
