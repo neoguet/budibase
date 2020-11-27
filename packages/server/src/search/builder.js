@@ -142,7 +142,7 @@ class SearchController {
         continue
       }
       // syntax is very weird, this is undocumented
-      const queryTokens = this.index.pipeline.run(elasticlunr.tokenizer(query))
+      const queryTokens = elasticlunr.tokenizer(query)
       const references = Object.keys(
         this.index.fieldSearch(queryTokens, prop, {
           [prop]: config,
