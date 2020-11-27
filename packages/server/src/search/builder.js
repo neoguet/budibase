@@ -133,7 +133,8 @@ class SearchController {
     const orConditions =
       !params.boolean || params.boolean.toLowerCase() === "or"
     const config = {
-      fuzzy: true,
+      fuzzy: term => (term.length > 1 ? true : null),
+      prefix: term => term.length >= 1,
     }
 
     let results = []
