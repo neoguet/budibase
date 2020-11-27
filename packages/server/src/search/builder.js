@@ -1,8 +1,10 @@
-const elasticlunr = require("elasticlunr")
+const MiniSearch = require("minisearch")
 const CouchDB = require("../db")
 const emitter = require("../events")
 const { getRowParams, getTableParams } = require("../db/utils")
 const { attachLinkInfo } = require("../db/linkedRows")
+
+const STATIC_FIELDS = ["_id", "_rev", "type", "tableId"]
 
 class ControllerStorage {
   constructor() {
@@ -76,11 +78,11 @@ class SearchController {
 
   async buildIndex() {
     const table = this.table
-    this.index = elasticlunr(function() {
-      for (let property of Object.keys(table.schema)) {
-        this.addField(property)
-      }
-      this.setRef("_id")
+    const fields = Object.keys(table.schema)
+    this.index = new MiniSearch({
+      fields,
+      storeFields: fields.concat(STATIC_FIELDS),
+      idField: "_id",
     })
     const rows = (
       await this.db.allDocs(
@@ -95,21 +97,27 @@ class SearchController {
     }
   }
 
+  findOnId(row) {
+    return this.index.search(row._id, {
+      fields: ["_id"],
+    })
+  }
+
   addRow(row) {
-    if (this.index.documentStore.getDoc(row._id)) {
-      this.index.updateDoc(row)
-    } else {
-      this.index.addDoc(row)
+    const found = this.findOnId(row)
+    if (found && found.length !== 0) {
+      this.index.remove(row)
     }
+    this.index.add(row)
   }
 
   deleteRow(row) {
-    this.index.removeDoc(row)
+    this.index.remove(row)
   }
 
   search(params) {
     let options = {
-      expand: true,
+      fuzzy: true,
     }
     let results
     if (typeof params.query === "object") {
@@ -117,11 +125,7 @@ class SearchController {
     } else {
       results = this.index.search(params.query, options)
     }
-    let docs = []
-    for (let result of results) {
-      docs.push(this.index.documentStore.getDoc(result.ref))
-    }
-    return docs
+    return results
   }
 
   // break this out, some crazy stuff going on here
@@ -129,9 +133,7 @@ class SearchController {
     const orConditions =
       !params.boolean || params.boolean.toLowerCase() === "or"
     const config = {
-      bool: "OR",
-      boost: 1,
-      expand: true,
+      fuzzy: true,
     }
 
     let results = []
@@ -142,29 +144,35 @@ class SearchController {
         continue
       }
       // syntax is very weird, this is undocumented
-      const queryTokens = elasticlunr.tokenizer(query)
-      const references = Object.keys(
-        this.index.fieldSearch(queryTokens, prop, {
-          [prop]: config,
-        })
-      )
+      const found = this.index.search(query, {
+        ...config,
+        fields: [prop],
+        combineWith: "AND",
+      })
       // OR condition, union of arrays
       if (orConditions) {
-        results = results.concat(references)
+        results = results.concat(found)
       }
       // AND condition, need to populate first
       else if (first) {
-        results = references
+        results = found
         first = false
       }
       // get the intersection of arrays for AND
       else {
-        results = results.filter(result => references.includes(result))
+        const foundIds = found.map(result => result._id)
+        results = results.filter(result => foundIds.includes(result._id))
       }
     }
-    // make sure unique
+    // make sure unique and remove the search result info
     results = [...new Set(results)]
-    return results.map(result => ({ ref: result }))
+    for (let result of results) {
+      delete result.match
+      delete result.score
+      delete result.id
+      delete result.terms
+    }
+    return results
   }
 }
 
