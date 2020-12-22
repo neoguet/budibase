@@ -8,6 +8,25 @@ const {
   generateRowID,
 } = require("../../db/utils")
 
+function checkForTableErrors(table) {
+  let { rename } = table
+  let otherColNames = {}
+  for (let field of Object.values(table.schema)) {
+    if (field.type !== "link") {
+      continue
+    }
+    if (otherColNames[field.tableId] === field.fieldName) {
+      throw "Cannot use the same column name twice in another table for relationships"
+    }
+    otherColNames[field.tableId] = field.fieldName
+  }
+  if (rename && table.schema[rename.updated].type === "link") {
+    throw "Cannot rename a relationship column."
+  } else if (rename && table.primaryDisplay === rename.old) {
+    throw "Cannot rename the display column."
+  }
+}
+
 async function checkForColumnUpdates(db, oldTable, updatedTable) {
   let updatedRows
   const rename = updatedTable._rename
@@ -89,11 +108,11 @@ exports.save = async function(ctx) {
     delete tableToSave._rename
   }
 
-  // rename row fields when table column is renamed
-  if (_rename && tableToSave.schema[_rename.updated].type === "link") {
-    ctx.throw(400, "Cannot rename a linked column.")
-  } else if (_rename && tableToSave.primaryDisplay === _rename.old) {
-    ctx.throw(400, "Cannot rename the display column.")
+  // check for any errors we can check statically in input data
+  try {
+    checkForTableErrors(tableToSave)
+  } catch (err) {
+    ctx.throw(400, err)
   }
 
   let updatedRows = await checkForColumnUpdates(db, oldTable, tableToSave)
