@@ -8,8 +8,6 @@
     BugIcon,
   } from "components/common/Icons"
   import BuilderSettingsButton from "components/start/BuilderSettingsButton.svelte"
-
-  let modal
 </script>
 
 <div class="root">
