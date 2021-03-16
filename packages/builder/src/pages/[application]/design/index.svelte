@@ -1,5 +1,5 @@
 <script>
-  import { goto } from "@sveltech/routify"
+  import { goto } from "@roxi/routify"
   import { FrontendTypes } from "constants"
 
   $goto(`../${FrontendTypes.SCREEN}`)
