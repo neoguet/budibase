@@ -10,7 +10,7 @@
         $automationStore.automations.length > 0 &&
         (!$automationStore.selectedAutomation || !$automationStore.selectedAutomation?.automation?._id)
       ) {
-        $goto(`../${$automationStore.automations[0]._id}`)
+        $goto(`./${$automationStore.automations[0]._id}`)
       }
     })
 </script>

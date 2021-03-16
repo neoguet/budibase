@@ -12,7 +12,7 @@
       (!$backendUiStore.selectedTable || !$backendUiStore.selectedTable._id)
     ) {
       // this file routes as .../tables/index, so, go up one.
-      $goto(`../${$backendUiStore.tables[0]._id}`)
+      $goto(`./${$backendUiStore.tables[0]._id}`)
     }
   })
 </script>
