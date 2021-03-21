@@ -84,8 +84,8 @@ exports.save = async function(ctx) {
     const tableView = tableToSave.views[view]
     if (!tableView) continue
 
-    if (tableView.schema.group || tableView.schema.field) continue
-    tableView.schema = tableToSave.schema
+   if (tableView.schema.group || tableView.schema.field) continue
+   // tableView.schema = tableToSave.schema
   }
 
   // update linked rows
