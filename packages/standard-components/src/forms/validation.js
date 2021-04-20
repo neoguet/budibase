@@ -1,4 +1,6 @@
 import flatpickr from "flatpickr"
+import { fieldFormat } from "./FieldFormat"
+import { cloneDeep } from "lodash/fp"
 
 export const createValidatorFromConstraints = (constraints, field, table) => {
   let checks = []
@@ -42,6 +44,14 @@ export const createValidatorFromConstraints = (constraints, field, table) => {
     if (exists(constraints.datetime?.latest)) {
       const limit = constraints.datetime.latest
       checks.push(dateConstraint(limit, false))
+    }
+
+    //format constraint
+    if (exists(constraints.format?.pattern)) {
+      const pattern = constraints.format.pattern
+      const message = constraints.format.message
+      const CustomRegexp = constraints.format.CustomRegexp
+      checks.push(formatConstraint(pattern, message, CustomRegexp))
     }
   }
 
@@ -108,5 +118,26 @@ const dateConstraint = (dateString, isEarliest) => {
     const adjective = isEarliest ? "Earliest" : "Latest"
     const limitString = flatpickr.formatDate(new Date(dateLimit), "F j Y, H:i")
     return valid ? null : `${adjective} is ${limitString}`
+  }
+}
+
+const formatConstraint = (pattern, message, CustomRegexp) => value => {
+
+  if (value == null || value === "") {
+    return null
+  }
+  let format = cloneDeep(fieldFormat[pattern])
+  if(format.type === 'custom'){
+    if (exists(CustomRegexp)){
+      format.regexp = CustomRegexp
+      exists(message) ? format.message = message : null
+    }else{
+      return null
+    }
+  }
+  if(value.match(RegExp(format.regexp))) {       
+    return null
+  }else{
+    return format.message
   }
 }

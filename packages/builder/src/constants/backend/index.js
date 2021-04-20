@@ -6,6 +6,11 @@ export const FIELDS = {
     constraints: {
       type: "string",
       length: {},
+      format: { 
+        pattern: "",
+        CustomRegexp: "",
+        message: "" 
+      },
       presence: false,
     },
   },

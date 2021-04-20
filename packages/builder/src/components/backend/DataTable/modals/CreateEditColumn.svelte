@@ -23,6 +23,7 @@
   import DatePicker from "components/common/DatePicker.svelte"
   import ConfirmDialog from "components/common/ConfirmDialog.svelte"
   import { truncate } from "lodash"
+  import { fieldFormat } from "@budibase/standard-components"
 
   const AUTO_COL = "auto"
   const LINK_TYPE = FIELDS.LINK.type
@@ -37,6 +38,9 @@
     fieldName: $tables.selected.name,
   }
 
+  //merge fieldDefinition with existing field constraints to update news constraints in fieldDefinition
+  field.constraints.format = {...fieldDefinitions[field.type.toUpperCase()].constraints.format, ...field.constraints.format  }
+  
   let originalName = field.name
   let primaryDisplay =
     $tables.selected.primaryDisplay == null ||
@@ -67,6 +71,7 @@
   $: canBeRequired =
     field.type !== LINK_TYPE && !uneditable && field.type !== AUTO_COL
   $: relationshipOptions = getRelationshipOptions(field)
+  $: isCustomFormat = field?.constraints?.format.pattern == "custom"
 
   async function saveColumn() {
     if (field.type === AUTO_COL) {
@@ -114,6 +119,15 @@
     const req = e.target.checked
     field.constraints.presence = req ? { allowEmpty: false } : false
     required = req
+  }
+
+  function onChangeFormat(e) {
+    const req = e.target.value
+    isCustomFormat = req == "custom"
+    if (!isCustomFormat) {
+      field.constraints.format.message=""
+      field.constraints.format.CustomRegexp=""
+    }
   }
 
   function onChangePrimaryDisplay(e) {
@@ -228,6 +242,30 @@
       type="number"
       label="Max Length"
       bind:value={field.constraints.length.maximum} />
+
+    <Select
+      secondary
+      thin
+      label="Field format"
+      on:change={onChangeFormat}
+      bind:value={field.constraints.format.pattern}>
+      <option value = "" >None</option>
+      {#each Object.values(fieldFormat) as format}
+        <option value={format.type}>{format.name}</option>
+      {/each}
+    </Select>
+
+    {#if isCustomFormat}
+      <Input
+        thin
+        label="Regexp expression"
+        bind:value={field.constraints.format.CustomRegexp} />
+      <Input
+        thin
+        label="Error message"
+        bind:value={field.constraints.format.message} />
+    {/if} 
+
   {:else if field.type === 'options'}
     <ValuesList
       label="Options (one per line)"
